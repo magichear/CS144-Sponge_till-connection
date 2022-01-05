@@ -1,9 +1,9 @@
 #!/bin/bash
 
-/headless/sponge/tun.sh start
+../tun.sh start
 service apache2 start
 echo "QWx0NhMPkoM/bJr/ohvHXlviFhOyYrYb+qqdOnwLYo4"  > /var/www/html/xyzzy
-WEB_HASH=`./apps/webget 127.0.0.1 /xyzzy | tee /dev/stderr | tail -n 1`
+WEB_HASH=`./apps/webget 169.254.145.1 /xyzzy | tee /dev/stderr | tail -n 1`
 CORRECT_HASH="QWx0NhMPkoM/bJr/ohvHXlviFhOyYrYb+qqdOnwLYo4"
 
 if [ "${WEB_HASH}" != "${CORRECT_HASH}" ]; then
