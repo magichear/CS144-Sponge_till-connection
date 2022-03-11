@@ -1,11 +1,3 @@
-# 传输层实验
-
-- 应用层向TCP层发送用于网间传输的、用8位字节表示的数据流。
-- 然后TCP把数据流分区成适当长度的报文段（通常受该计算机连接的网络的数据链路层的最大传输单元（MTU）的限制）。
-- 之后TCP把结果包传给IP层，由它来通过网络将包传送给接收端实体的TCP层。
-- TCP为了保证不发生丢包，就给每个包一个序号，同时序号也保证了传送到接收端实体的包的按序接收。
-- 本实验要求实验者完善TCP发送器，实现接收方窗口信息维护、发送数据、发送数据维护以及发送定时器等功能
-
 For build prereqs, see [the CS144 VM setup instructions](https://web.stanford.edu/class/cs144/vm_howto).
 
 ## Sponge quickstart
