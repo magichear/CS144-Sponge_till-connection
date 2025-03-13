@@ -1,5 +1,7 @@
 #include "buffer.hh"
-
+#ifdef NOT_UBUNTU_18_04
+#include <stdexcept>  // for non-Ubuntu 18.04
+#endif
 using namespace std;
 
 void Buffer::remove_prefix(const size_t n) {

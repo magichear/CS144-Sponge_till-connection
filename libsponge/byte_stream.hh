@@ -1,6 +1,7 @@
 #ifndef SPONGE_LIBSPONGE_BYTE_STREAM_HH
 #define SPONGE_LIBSPONGE_BYTE_STREAM_HH
 
+#include "buffer.hh"
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -16,8 +17,12 @@
 class ByteStream {
   private:
     // Your code here -- add private members as necessary.
-
-    bool _error{};  //!< Flag indicating that the stream suffered an error.
+    BufferList _buffer = {};  //!< Buffer to store the bytes.
+    size_t _capacity = 0;  //!< Capacity of the buffer.
+    size_t _read_count = 0;  //!< Number of bytes read.
+    size_t _write_count = 0;  //!< Number of bytes written.
+    bool _input_ended_flag = false;  //!< Flag indicating that the input has ended.
+    bool _error = false;  //!< Flag indicating that the stream suffered an error.
 
   public:
     //! Construct a stream with room for `capacity` bytes.
@@ -53,17 +58,13 @@ class ByteStream {
 
     //! Read (i.e., copy and then pop) the next "len" bytes of the stream
     //! \returns a vector of bytes read
-    std::string read(const size_t len) {
-        const auto ret = peek_output(len);
-        pop_output(len);
-        return ret;
-    }
+    std::string read(const size_t len);
 
     //! \returns `true` if the stream input has ended
     bool input_ended() const;
 
     //! \returns `true` if the stream has suffered an error
-    bool error() const { return _error; }
+    bool error() const;
 
     //! \returns the maximum amount that can currently be read from the stream
     size_t buffer_size() const;

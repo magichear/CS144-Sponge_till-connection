@@ -2,6 +2,7 @@
 #define SPONGE_LIBSPONGE_STREAM_REASSEMBLER_HH
 
 #include "byte_stream.hh"
+#include <set>
 
 #include <cstdint>
 #include <string>
@@ -11,9 +12,21 @@
 class StreamReassembler {
   private:
     // Your code here -- add private members as necessary.
+    struct block_node {
+        size_t begin = 0;
+        size_t length = 0;
+        std::string data = "";
+        bool operator<(const block_node t) const { return begin < t.begin; }
+    };
 
-    ByteStream _output;  //!< The reassembled in-order byte stream
-    size_t _capacity;    //!< The maximum number of bytes
+    ByteStream _output;                 //!< The reassembled in-order byte stream
+    size_t _capacity;                   //!< The maximum number of bytes
+    size_t _flow_tail = 0;             //!< The index of the end of flow
+    size_t _unassembled_byte = 0;       //!< The number of unassembled bytes
+    bool _eof = false;                  //!< Flag indicating if the end of the stream has been reached
+    std::set<block_node> _blocks = {};  //!< Set to store unassembled byte blocks
+
+    bool merge_block(block_node &elm1, const block_node &elm2, std::set<block_node>::iterator &iter);
 
   public:
     //! \brief Construct a `StreamReassembler` that will store up to `capacity` bytes.
