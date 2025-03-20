@@ -1,7 +1,6 @@
 #!/bin/bash
 
-#/headless/sponge/tap.sh start
-service apache2 start
+service apache2 restart
 echo "QWx0NhMPkoM/bJr/ohvHXlviFhOyYrYb+qqdOnwLYo4"  > /var/www/html/xyzzy
 WEB_HASH=`./apps/webget 127.0.0.1 /xyzzy | tee /dev/stderr | tail -n 1`
 CORRECT_HASH="QWx0NhMPkoM/bJr/ohvHXlviFhOyYrYb+qqdOnwLYo4"
