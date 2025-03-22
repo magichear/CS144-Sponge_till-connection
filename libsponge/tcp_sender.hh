@@ -31,6 +31,21 @@ class TCPSender {
 
     //! the (absolute) sequence number for the next byte to be sent
     uint64_t _next_seqno{0};
+    uint64_t _recv_seg{0};
+
+    unsigned int _timer_lastTime{0};
+    bool _timer{false};
+
+    size_t _current_time{0};
+    uint16_t _window_size{1};
+    size_t _consecutive_retrans{0};
+    unsigned int _retransmission_timeout;
+    bool _syn_exist = false;
+    bool _fin_exist = false;
+    std::queue<TCPSegment> _unresponsed_msg;
+    size_t calc_seg_length();
+    TCPSegment segGen(std::string type);
+    void push_segment(const TCPSegment &tcp_segment);
 
   public:
     //! Initialize a TCPSender
