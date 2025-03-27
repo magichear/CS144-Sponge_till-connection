@@ -1,3 +1,10 @@
+# 传输层实验
+
+- 当应用程序希望通过 TCP 与另一个应用程序通信时，它会发送一个通信请求。
+- 这个请求必须被送到一个确切的地址。在双方“握手”之后，TCP 将在两个应用程序之间建立一个全双工 (full-duplex) 的通信。
+- 当通信结束后，TCP负责将通信的通道销毁。以上功能都是TCP连接器来完成的。
+- 本实验要求实验者完善TCP发送器，实现对TCP接收、发送接口的封装，进而完成TCP通信的基础。
+
 For build prereqs, see [the CS144 VM setup instructions](https://web.stanford.edu/class/cs144/vm_howto).
 
 ## Sponge quickstart
