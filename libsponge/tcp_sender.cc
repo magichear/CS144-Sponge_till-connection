@@ -27,58 +27,85 @@ TCPSender::TCPSender(const size_t capacity, const uint16_t retx_timeout, const s
 
 uint64_t TCPSender::bytes_in_flight() const { return max(_next_seqno - _recv_seg, 0ul); }
 
+/**
+ * [FIX] ：
+ *       - 填充主逻辑不变，依然分三个阶段，但是中间的数据段改为可以重复填充（附加FIN的情况移动到segGen中处理）
+ *       - 新增零窗口探测逻辑（发送后立即中断循环）
+ */
 void TCPSender::fill_window() {
-    TCPSegment tcp_segment;
-    // SYN尚未发送
+    // 处理SYN段的发送
     if (!_syn_exist) {
-        tcp_segment = segGen("SYN");
+        TCPSegment syn_seg = segGen("SYN");
+        push_segment(syn_seg);
     }
-    // 根据窗口大小塞入数据
-    else if (bytes_in_flight() < _window_size) {
-        // FIN尚未发送且输入流已结束
-        if (!_fin_exist && _stream.eof()) {
-            tcp_segment = segGen("FIN");
+
+    // 发送数据段，可能包含FIN
+    while (_stream.buffer_size() && (bytes_in_flight() < _window_size || !_window_size)) {
+        TCPSegment data_seg = segGen("DATA");
+        if (data_seg.length_in_sequence_space() == 0) {
+            break; // 无法生成更多数据段
         }
-        // 有数据
-        else if (_stream.buffer_size()) {
-            tcp_segment = segGen("");
-            // 读完数据之后输入流刚好结束
-            if (!_fin_exist && _stream.eof()) {
-                tcp_segment.header().fin = true;
+        push_segment(data_seg);
+        // 零窗口探测时发送一个段后停止
+        if (!_window_size) {
+            break;
+        }
+    }
+
+    // 发送单独的FIN段（当没有数据且窗口允许时）
+    if (!_fin_exist && _stream.eof() && (bytes_in_flight() < _window_size || !bytes_in_flight())) {
+        TCPSegment fin_seg = segGen("FIN");
+        push_segment(fin_seg);
+    }
+}
+
+/**
+ * 生成TCP段的核心逻辑，支持SYN/FIN/数据三种类型
+ * [FIX] 自动处理FIN标志条件判断：
+ *       1. 需要流已结束且窗口空间允许（正常窗口或零窗口探测）
+ *       2. FIN标志与数据段合并发送，避免单独FIN段占用序列号空间
+ */
+TCPSegment TCPSender::segGen(std::string type) {
+    TCPSegment seg;
+    seg.header().seqno = next_seqno();
+
+    if (type == "SYN") {
+        seg.header().syn = true;
+        _syn_exist = true;
+    } else if (type == "FIN") {
+        seg.header().fin = true;
+        _fin_exist = true;
+    } else {
+        // 生成数据段，并可能添加FIN
+        size_t len = calc_seg_length();
+        if (len == 0) {
+            return seg; // 无数据可读
+        }
+        seg.payload() = Buffer(_stream.read(len));
+
+        // 检查是否可以添加FIN
+        if (!_fin_exist && _stream.eof()) {
+            size_t current_flight = bytes_in_flight();
+            size_t seg_length = seg.length_in_sequence_space();
+            bool window_ok = (current_flight + seg_length + 1 <= _window_size);
+            bool zero_window_probe = (_window_size == 0 && current_flight == 0 && seg_length == 1);
+            if (window_ok || zero_window_probe) {
+                seg.header().fin = true;
                 _fin_exist = true;
             }
         }
     }
-
-    if (tcp_segment.header().seqno.raw_value() != 0) {  // 初值为0
-        push_segment(tcp_segment);
-    }
-}
-
-TCPSegment TCPSender::segGen(std::string type) {
-    // 创建一个TCP段
-    TCPSegment tcp_segment;
-    tcp_segment.header().seqno = next_seqno();
-
-    if (type == "SYN") {
-        tcp_segment.header().syn = true;
-        _syn_exist  = true;
-    } else if (type == "FIN") {
-        tcp_segment.header().fin = true;
-        _fin_exist  = true;
-    } else {
-        tcp_segment.payload() = Buffer(_stream.read(calc_seg_length()));
-    }
-    return tcp_segment;
+    return seg;
 }
 
 /**
  * 总数据量、窗口大小、TCP允许发送的最大数据量，三者取最小
+ * [FIX] 窗口大小计算错误，没有考虑零窗口探测（最少发送一字节）
  */
 size_t TCPSender::calc_seg_length() {
-    return min(TCPConfig::MAX_PAYLOAD_SIZE, 
-               min(_stream.buffer_size(), 
-                   static_cast<size_t>(_window_size) - bytes_in_flight()));
+    return min(TCPConfig::MAX_PAYLOAD_SIZE,
+                min(_stream.buffer_size(),
+                    max(static_cast<size_t>(1), static_cast<size_t>(_window_size)) - bytes_in_flight()));
 }
 
 void TCPSender::push_segment(const TCPSegment &tcp_segment) {
