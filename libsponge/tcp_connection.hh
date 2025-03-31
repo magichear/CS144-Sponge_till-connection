@@ -21,6 +21,13 @@ class TCPConnection {
     //! in case the remote TCPConnection doesn't know we've received its whole stream?
     bool _linger_after_streams_finish{true};
 
+    size_t _current_time{0}, _last_time{0};
+    bool _active{false}, _recv_rst{false}, _send_rst{false};
+    size_t _MAX_WAIT_TIME = (static_cast<size_t>(_cfg.rt_timeout) *10); // 这里只能是10（文档里也有说明），多了少了都会出错  31: t_active_close
+    void __send_segment();
+    void unclean_shutdown();
+    void clean_shutdown();
+
   public:
     //! \name "Input" interface for the writer
     //!@{
